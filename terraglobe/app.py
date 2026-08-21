@@ -413,6 +413,25 @@ class App:
         def at(r, c, b):
             o.append(("\x1b[%d;%dH" % (r, c)).encode()); o.append(b)
 
+        def leader(x0, y0, x1, y1, dim_b):
+            """Dotted leader line from (x0,y0) to (x1,y1) using middle dots."""
+            dx = abs(x1 - x0); dy = abs(y1 - y0)
+            sx = 1 if x0 < x1 else -1
+            sy = 1 if y0 < y1 else -1
+            err = dx - dy
+            dot = "\u00b7".encode("utf-8")
+            while True:
+                if not (x0 == x1 and y0 == y1):
+                    if 2 <= y0 <= rows - 1 and 1 <= x0 <= cols - 1:
+                        at(y0, x0, dim_b + dot)
+                if x0 == x1 and y0 == y1:
+                    break
+                e2 = 2 * err
+                if e2 > -dy:
+                    err -= dy; x0 += sx
+                if e2 < dx:
+                    err += dx; y0 += sy
+
         # corner brackets
         at(1, 1, accent + "\u250c".encode() + dim + "\u2500".encode())
         at(2, 1, accent + "\u2502".encode())
@@ -435,6 +454,7 @@ class App:
         at(rows, max(2, cols - 1 - len(ctrl)), dim + ctrl.encode())
 
         # destination labels: compact flag+city, centered on each visible endpoint
+        # destination labels: stationary on the right with leader lines to endpoints
         if getattr(self, "show_labels", True):
             ARCH_MAX = 0.57; mg = 8
             R_h = (ih - 2 * mg) / (2.0 + ARCH_MAX)
@@ -444,10 +464,11 @@ class App:
             cxg = min(Rg + 6.0, iw - Rg - 2.0)      # left=True
             cam = self.camera; cam.update_matrices()
             mf = cam._fwd
-            occupied = set()                            # (row, col) cells in use
-            n_lab = 0
+
+            # collect visible endpoints, sorted by remaining life
+            visible = []
             for t in sorted(traces, key=lambda x: -x.life):
-                if t.life <= TRACE_FADE or n_lab >= 12:
+                if t.life <= TRACE_FADE:
                     break
                 bv = t.b_vec()
                 wx = mf[0]*bv[0] + mf[1]*bv[1] + mf[2]*bv[2]
@@ -456,22 +477,30 @@ class App:
                 if wz <= 0:
                     continue                              # behind the globe
                 sx = cxg + Rg * wx; sy = cyg - Rg * wy
-                col = 2 + int(sx / self.cell_w_px)
-                row = 2 + int(sy / self.cell_h_px)
+                ec = 2 + int(sx / self.cell_w_px)          # endpoint cell coords
+                er = 2 + int(sy / self.cell_h_px)
+                visible.append((t, ec, er))
+
+            # right-side label column: stacked vertically, each with a leader line
+            label_w = 14
+            label_col = max(cols - label_w - 2, 2)
+            max_labels = min(rows - 4, 12)
+            for i, (t, ec, er) in enumerate(visible[:max_labels]):
+                lr = 3 + i                                # label row (stationary)
+                if lr > rows - 2:
+                    break
                 flag = flag_emoji(t.cc)
                 name = (t.city or t.country or "?")[:10]
                 txt = (flag + " " + name) if flag else name
-                w = len(txt)                              # flag=2 chars=2 cells, matches display
-                col -= w // 2                             # center on endpoint
-                col = max(2, min(col, cols - 1 - w))      # clamp into frame
-                row = max(2, min(row, rows - 1))
-                cells = frozenset((row, c) for c in range(col, col + w))
-                if cells & occupied:                      # skip if overlap
-                    continue
-                occupied |= cells
                 fg = "\x1b[38;2;%d;%d;%dm" % t.color
-                at(row, col, fg.encode() + txt.encode("utf-8"))
-                n_lab += 1
+                dim_c = tuple(int(c * 0.45) for c in t.color)
+                dim_s = "\x1b[38;2;%d;%d;%dm" % dim_c
+                # endpoint marker on the globe
+                at(er, ec, (fg + "\u25cf").encode("utf-8"))    # ●
+                # dotted leader line from endpoint to just before the label
+                leader(ec, er, label_col - 1, lr, dim_s.encode())
+                # stationary label text on the right
+                at(lr, label_col, (fg + txt).encode("utf-8"))
 
         if self.paused:
             at(2, 5, ("\x1b[38;2;255;200;80m\u23f8 PAUSED").encode() + RESETb)
