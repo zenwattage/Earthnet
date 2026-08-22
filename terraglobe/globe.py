@@ -254,6 +254,8 @@ class Trace:
     country: str = ""
     cc: str = ""               # ISO 3166-1 alpha-2 country code (for flag emoji)
     city: str = ""
+    dst_port: int = 0          # remote port (e.g. 443)
+    state: str = ""            # conntrack state (ESTABLISHED, TIME_WAIT, ...)
 
     def a_vec(self):
         return geo_to_vec(self.a_lat, self.a_lon)

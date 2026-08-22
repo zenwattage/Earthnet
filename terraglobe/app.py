@@ -194,17 +194,19 @@ class App:
                 flows, backend = ct_poll()
                 self.backend = backend
                 self.flow_count = len(flows)
-                remotes: dict[str, str] = {}  # ip -> proto
+                remotes: dict[str, tuple] = {}  # ip -> (proto, dport, state)
                 for f in flows:
                     r = remote_endpoint(f.src, f.dst)
                     if r is None:
                         continue
-                    remotes[r] = f.proto
+                    # remote port: dport if remote is dst, sport if remote is src
+                    port = f.dport if r == f.dst else f.sport
+                    remotes[r] = (f.proto, port, f.state)
                 if remotes:
                     resolved = self.geo.resolve_many(list(remotes.keys()))
                     with self.lock:
                         seen = set()
-                        for ip, proto in remotes.items():
+                        for ip, (proto, dport, state) in remotes.items():
                             g = resolved.get(ip)
                             if not g:
                                 continue
@@ -212,7 +214,7 @@ class App:
                             if g.get("lat") == 0 and g.get("lon") == 0:
                                 continue
                             seen.add(ip)
-                            self._upsert_trace(ip, proto, g)
+                            self._upsert_trace(ip, proto, g, dport, state)
                         # traces not seen begin fading (handled in main loop)
             except Exception as e:
                 print(f"[app] poll error: {e}", flush=True)
@@ -226,7 +228,7 @@ class App:
         r, g, b = colorsys.hsv_to_rgb(h, 0.65, 1.0)
         return (int(r * 255), int(g * 255), int(b * 255))
 
-    def _upsert_trace(self, ip: str, proto: str, g: dict):
+    def _upsert_trace(self, ip: str, proto: str, g: dict, dport: int = 0, state: str = ""):
         t = self.traces.get(ip)
         color = self._trace_color(ip)
         city = g.get("city", "") or ""
@@ -242,6 +244,8 @@ class App:
             t.city = city
             t.country = country
             t.cc = cc
+            t.dst_port = dport
+            t.state = state
         else:
             if len(self.traces) >= MAX_TRACES:
                 # drop the one with the least remaining life
@@ -256,6 +260,7 @@ class App:
                 color=color, life=TRACE_HOLD + TRACE_FADE,
                 phase=(hash(ip) & 0xFFFF) / 65535.0,
                 proto=proto, label=label, city=city, country=country, cc=cc,
+                dst_port=dport, state=state,
             )
 
     # ---- rendering ----
@@ -379,7 +384,7 @@ class App:
         RESETb = RESET.encode()
 
         gr_cols = max(8, cols - 2)
-        gr_rows = max(6, rows - 2)
+        gr_rows = max(6, rows - 7)  # leave room for legend + controls + frame
         cap = self.hd_res
         iw = min(gr_cols * self.cell_w_px, cap)
         ih = min(gr_rows * self.cell_h_px, cap)
@@ -422,28 +427,71 @@ class App:
         stat = (dim + ("flows %d  links %d  %.1ffps" % (self.flow_count, len(traces), self.fps)).encode())
         at(1, max(2, cols - 2 - len(stat.decode('ascii', 'replace'))), stat)
 
-        # footer
-        at(rows, 5, dim + ("origin %.2f,%.2f  src %s" % (self.home[0], self.home[1], self.backend)).encode())
-        ctrl = "q quit \u00b7 space pause \u00b7 +/- spin \u00b7 t traces \u00b7 g grid \u00b7 c clear"
-        at(rows, max(2, cols - 1 - len(ctrl)), dim + ctrl.encode())
+        # ── legend line: what the data means ──
+        leg_y = rows - 3
+        legend = (accent + b"LEGEND " + dim +
+                  b"ARCS=live connections  COLOR=per-destination  " +
+                  b"PULSE=traffic flow  LABELS=location+proto:port:state  " +
+                  b"COAST=landmass  GRID=lat/long")
+        at(leg_y, 2, legend)
+
+        # ── controls line: key bindings ──
+        ctrl_y = rows - 2
+        ctrl = ("[q]uit  [space]pause  [+/\u2212]speed  [r]everse  "
+                "[t]races  [g]rid  [s]tars  [h]ud  [l]abels  [c]lear  [R]efresh")
+        at(ctrl_y, 2, accent + b"KEYS " + dim + ctrl.encode())
+
+        # ── status footer (on bottom frame line) ──
+        spin_arrow = "\u21bb" if self.spin_speed >= 0 else "\u21ba"
+        status = "origin %.2f,%.2f  src %s  flows %d  links %d  %.1ffps  spin %.2f%s" % (
+            self.home[0], self.home[1], self.backend,
+            self.flow_count, len(traces), self.fps,
+            abs(self.spin_speed), spin_arrow)
+        at(rows, 5, dim + status.encode("utf-8"))
 
         # destination labels: stationary on the right, color-matched to each trace
         if getattr(self, "show_labels", True):
             label_w = 14
             label_col = max(cols - label_w - 2, 2)
-            max_labels = min(rows - 4, 12)
+            max_labels = min((rows - 7) // 3, 12)  # 3 lines per trace
             n_lab = 0
+            import datetime as _dt
+            utc_now = _dt.datetime.now(_dt.timezone.utc)
             for t in sorted(traces, key=lambda x: -x.life):
                 if t.life <= TRACE_FADE or n_lab >= max_labels:
                     break
-                lr = 3 + n_lab
-                if lr > rows - 2:
+                lr = 3 + n_lab * 3          # location line
+                cr = lr + 1                  # connection info line
+                dr = lr + 2                  # duration + local time line
+                if dr > rows - 4:
                     break
                 flag = flag_emoji(t.cc)
                 name = (t.city or t.country or "?")[:10]
                 txt = (flag + " " + name) if flag else name
                 fg = "\x1b[38;2;%d;%d;%dm" % t.color
+                dim_c = tuple(int(c * 0.55) for c in t.color)
+                dim_fg = "\x1b[38;2;%d;%d;%dm" % dim_c
                 at(lr, label_col, (fg + txt).encode("utf-8"))
+                # line 2: protocol : port  state
+                proto = (t.proto or "ip").upper()[:4]
+                port = str(t.dst_port) if t.dst_port else "-"
+                state = (t.state or "")[:4].upper()
+                conn = "%s :%s" % (proto, port)
+                if state:
+                    conn += "  " + state
+                at(cr, label_col, (dim_fg + conn).encode("utf-8"))
+                # line 3: connection duration + local time at destination
+                age = t.age
+                if age < 60:
+                    dur = "%ds" % int(age)
+                elif age < 3600:
+                    dur = "%dm%02ds" % (int(age // 60), int(age % 60))
+                else:
+                    dur = "%dh%02dm" % (int(age // 3600), int((age % 3600) // 60))
+                tz_offset = round(t.b_lon / 15.0)
+                local = utc_now + _dt.timedelta(hours=tz_offset)
+                tstr = local.strftime("%H:%M")
+                at(dr, label_col, (dim_fg + ("%s  %s" % (dur, tstr))).encode("utf-8"))
                 n_lab += 1
 
         if self.paused:
@@ -490,6 +538,7 @@ class App:
                     live = []
                     for ip, t in list(self.traces.items()):
                         t.life -= dt
+                        t.age += dt
                         if t.life <= 0:
                             del self.traces[ip]
                             continue
@@ -575,5 +624,12 @@ class App:
             elif c == "l":
                 self.show_labels = not self.show_labels
             elif c == "c":
+                with self.lock:
+                    self.traces.clear()
+            elif c == "R":
+                # Refresh: reload theme palette, clear traces, reset spin
+                self.palette = load_palette()
+                self.cfg.palette = self.palette
+                self.camera.spin = 0.0
                 with self.lock:
                     self.traces.clear()

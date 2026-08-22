@@ -55,6 +55,11 @@ def _flag_emoji(cc: str) -> str:
 def demo_traces():
     """Return 12 Trace objects from Seattle to international destinations.
     Used by --demo to run the full animated globe with fixed traces."""
+    # (port, state, age_seconds) for each destination — realistic services
+    PORTS = [443, 443, 53, 443, 22, 8080, 443, 443, 443, 53, 443, 22]
+    STATES = ["ESTA", "ESTA", "TIME", "ESTA", "ESTA", "CLOS",
+             "ESTA", "SYN_", "ESTA", "TIME", "ESTA", "ESTA"]
+    AGES = [12, 145, 3, 67, 892, 1, 34, 5, 234, 8, 56, 1203]
     traces = []
     for i, (city, cc, lat, lon) in enumerate(DESTINATIONS):
         traces.append(Trace(
@@ -63,6 +68,7 @@ def demo_traces():
             color=_trace_color(city),
             phase=i / 12.0,
             proto="tcp", label=city, city=city, country=cc, cc=cc,
+            dst_port=PORTS[i], state=STATES[i], age=AGES[i],
             life=99999.0, alpha=1.0,
         ))
     return traces
