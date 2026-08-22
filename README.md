@@ -1,5 +1,7 @@
 # earthnet
 
+![earthnet demo](earthnet-demo.gif)
+
 A floating, translucent 3D globe of the Earth in your terminal, with glowing
 great-circle arcs tracing every internet connection coming and going from your
 network. Built for the **Foot** terminal (works in any truecolor terminal).
