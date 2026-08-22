@@ -110,8 +110,8 @@ def render_hd(width: int, height: int, camera, traces, cfg, left: bool = False,
                          c[1:-1, :-2] + c[1:-1, 1:-1] + c[1:-1, 2:] +
                          c[2:, :-2] + c[2:, 1:-1] + c[2:, 2:]) / 9.0
         return k
-    cn_b = blur3(cn)
-    cf_b = blur3(cf)
+    cn_b = blur3(blur3(cn))
+    cf_b = blur3(blur3(cf))
     def grad_int(c):
         gx = np.zeros_like(c); gy = np.zeros_like(c)
         gx[:, 1:] = c[:, 1:] - c[:, :-1]
@@ -126,7 +126,7 @@ def render_hd(width: int, height: int, camera, traces, cfg, left: bool = False,
         def gdist(v, step):
             return np.abs(((v + step / 2.0) % step) - step / 2.0)
         dg = np.minimum(gdist(nlon, cfg.grid_step_lon), gdist(nlat, cfg.grid_step_lat))
-        grat_int = np.clip(1.0 - dg / 0.35, 0.0, 1.0) * inside * 0.22
+        grat_int = np.clip(1.0 - dg / 0.35, 0.0, 1.0) * inside * 0.30
     else:
         grat_int = np.zeros_like(r2)
 

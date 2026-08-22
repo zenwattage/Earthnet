@@ -143,7 +143,7 @@ class App:
         self.hd = HAVE_HD and not getattr(args, "no_hd", False)
         self.hd_res = int(getattr(args, "hd_res", None) or 960)  # cap longest px dim
         self.hd_colors = int(getattr(args, "hd_colors", None) or 96)
-        self.hd_ss = int(getattr(args, "hd_ss", None) or 1)  # 1=fast; 2=supersample (smoother, slower)
+        self.hd_ss = int(getattr(args, "hd_ss", None) or 2)  # 2=supersample (smoother); 1=fast (jittery)
         self.cell_w_px = 8
         self.cell_h_px = 17  # refined from CSI 16 at runtime
         print(f"[app] render: {'HD sixel' if self.hd else 'text'}"
