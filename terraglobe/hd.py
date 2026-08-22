@@ -93,16 +93,30 @@ def render_hd(width: int, height: int, camera, traces, cfg, left: bool = False,
     nlo = land.n_lon
 
     def coverage2d(lat, lon):
-        li = np.clip(((90.0 - lat) / 180.0 * nla).astype(np.int32), 0, nla - 1)
-        lo = np.clip(((lon + 180.0) / 360.0 * nlo).astype(np.int32), 0, nlo - 1)
-        return np.where(inside, larr[li * nlo + lo], 0.0)
+        # Bilinear interpolation of the land coverage so coastlines glide
+        # smoothly as the globe rotates instead of snapping between
+        # quantized 0.5-degree grid cells (which caused horizontal streaks).
+        fi = (90.0 - lat) / 180.0 * (nla - 1)
+        fo = (lon + 180.0) / 360.0 * (nlo - 1)
+        i0 = np.clip(np.floor(fi).astype(np.int32), 0, nla - 2)
+        o0 = np.clip(np.floor(fo).astype(np.int32), 0, nlo - 2)
+        ti = np.clip(fi - i0, 0.0, 1.0)
+        to = np.clip(fo - o0, 0.0, 1.0)
+        o1 = (o0 + 1) % nlo
+        c00 = larr[i0 * nlo + o0]
+        c01 = larr[i0 * nlo + o1]
+        c10 = larr[(i0 + 1) * nlo + o0]
+        c11 = larr[(i0 + 1) * nlo + o1]
+        c = (c00 * (1 - ti) * (1 - to) + c01 * (1 - ti) * to +
+             c10 * ti * (1 - to) + c11 * ti * to)
+        return np.where(inside, c, 0.0)
 
     cn = coverage2d(nlat, nlon)
     cf = coverage2d(flat, flon)
 
     # coastline intensity via coverage gradient (Sobel-ish) -> anti-aliased.
-    # Blur the coverage first so the coastline edge is smooth and doesn't
-    # jitter as the quantized landmask shifts beneath the rotating globe.
+    # Bilinear interpolation already smooths the coverage; a light blur
+    # further anti-aliases the gradient in screen space.
     rim_band = r2 < 0.97
     def blur3(c):
         k = c.copy()
@@ -114,10 +128,14 @@ def render_hd(width: int, height: int, camera, traces, cfg, left: bool = False,
     cf_b = blur3(blur3(cf))
     def grad_int(c):
         gx = np.zeros_like(c); gy = np.zeros_like(c)
-        gx[:, 1:] = c[:, 1:] - c[:, :-1]
-        gy[1:, :] = c[1:, :] - c[:-1, :]
+        gx[:, 1:-1] = (c[:, 2:] - c[:, :-2]) * 0.5
+        gy[1:-1, :] = (c[2:, :] - c[:-2, :]) * 0.5
         g = np.sqrt(gx * gx + gy * gy)
-        return np.clip(g / 0.28, 0.0, 1.0) * inside * rim_band
+        # Gentle ramp for smooth anti-aliasing, then power curve to suppress
+        # the weak gradient tails that create a glow/halo around each coastline.
+        # Weak values (intensity ~0.3) become ~0.05 (below 0.10 mask, not drawn);
+        # strong values (~0.8) become ~0.57 (dim but visible); center stays 1.0.
+        return (np.clip((g - 0.08) / 0.28, 0.0, 1.0) ** 2.5) * inside * rim_band
     coast_n_int = grad_int(cn_b)
     coast_f_int = grad_int(cf_b)
 
@@ -232,25 +250,59 @@ def _rasterize_trace(tr, camera, R, W, H, cx, cy, pal, glow, tcolr):
     col = np.broadcast_to(color, (steps + 1, 3)).copy()
     col = np.where((behind & ~occluded)[:, None], col * 0.4, col)
 
-    # --- dense polyline interpolation so the line is continuous (no breakup) ---
-    dxs = np.diff(px); dys = np.diff(py)
-    segs = (np.hypot(dxs, dys).astype(np.int32) + 1).clip(1, 256)
-    cum = np.concatenate(([0], np.cumsum(segs)))
-    total = int(cum[-1])
+    # --- vectorized Bresenham line drawing for gap-free 1-pixel lines ---
+    # Uses the midpoint formulation: for the driving axis, coordinates step
+    # linearly; for the other axis, floor((2*i*minor + major) / (2*major))
+    # selects the same pixels as the classic error-accumulation algorithm.
+    ix = px.astype(np.int32); iy = py.astype(np.int32)
+    sx0 = ix[:-1]; sy0 = iy[:-1]
+    sx1 = ix[1:];  sy1 = iy[1:]
+    ddx = np.abs(sx1 - sx0)
+    ddy = np.abs(sy1 - sy0)
+    stepx = np.sign(sx1 - sx0).astype(np.int32)
+    stepy = np.sign(sy1 - sy0).astype(np.int32)
+    stepx = np.where(stepx == 0, 1, stepx)
+    stepy = np.where(stepy == 0, 1, stepy)
+
+    n_segs = len(sx0)
+    n_pts = np.maximum(ddx, ddy) + 1          # pixels per segment
+    total = int(n_pts.sum())
     if total > 0:
-        idx = np.arange(total, dtype=np.int64)
-        seg_id = np.clip(np.searchsorted(cum, idx, side='right') - 1, 0, len(px) - 2)
-        fr = ((idx - cum[seg_id]).astype(np.float32)) / segs[seg_id].astype(np.float32)
-        PXP = (px[seg_id] + fr * dxs[seg_id]).astype(np.int32)
-        PYP = (py[seg_id] + fr * dys[seg_id]).astype(np.int32)
-        GVP = gv[seg_id] + fr * (gv[seg_id + 1] - gv[seg_id])
-        COLP = col[seg_id] + fr[:, None] * (col[seg_id + 1] - col[seg_id])
+        cum_pts = np.concatenate(([0], np.cumsum(n_pts)))
+        seg_id = np.repeat(np.arange(n_segs, dtype=np.int32), n_pts)
+        step_i = (np.arange(total, dtype=np.int32) -
+                  np.repeat(cum_pts[:-1], n_pts))
+
+        d_x = ddx[seg_id]; d_y = ddy[seg_id]
+        sxp = stepx[seg_id]; syp = stepy[seg_id]
+        x0p = sx0[seg_id]; y0p = sy0[seg_id]
+
+        x_drives = d_x >= d_y
+        dx_safe = np.where(d_x == 0, 1, d_x)
+        dy_safe = np.where(d_y == 0, 1, d_y)
+
+        PXP = np.where(x_drives,
+                       x0p + step_i * sxp,
+                       x0p + np.floor((2.0 * step_i * d_x + d_y) /
+                                      (2.0 * dy_safe)).astype(np.int32) * sxp)
+        PYP = np.where(x_drives,
+                       y0p + np.floor((2.0 * step_i * d_y + d_x) /
+                                      (2.0 * dx_safe)).astype(np.int32) * syp,
+                       y0p + step_i * syp)
+
+        drive_len = np.where(x_drives, d_x, d_y).astype(np.float32)
+        drive_len = np.where(drive_len == 0, 1.0, drive_len)
+        t_frac = step_i.astype(np.float32) / drive_len
+
+        gv0 = gv[:-1]; gv1 = gv[1:]
+        GVP = gv0[seg_id] + t_frac * (gv1[seg_id] - gv0[seg_id])
+        col0 = col[:-1]; col1 = col[1:]
+        COLP = col0[seg_id] + t_frac[:, None] * (col1[seg_id] - col0[seg_id])
+
         ok0 = GVP > 0.02
-        # crisp brush: centre + 4 edge pixels only (no diagonal corners -> no
-        # fuzzy white outline); keeps the line thin and laser-like
-        for dy, dx, wmul in ((0, 0, 1.0), (-1, 0, 0.3), (1, 0, 0.3),
-                             (0, -1, 0.3), (0, 1, 0.3)):
-            yy = PYP + dy; xx = PXP + dx
+        # single-pixel brush: 1px Bresenham line, no edge halo
+        for dy_b, dx_b, wmul in ((0, 0, 1.0),):
+            yy = PYP + dy_b; xx = PXP + dx_b
             wgt = GVP * wmul
             ok = ok0 & (xx >= 0) & (xx < W) & (yy >= 0) & (yy < H)
             if not ok.any():

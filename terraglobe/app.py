@@ -141,9 +141,9 @@ class App:
         self.cell_aspect = DEFAULT_CELL_ASPECT  # refined from CSI 16 at runtime
         # HD (sixel) path
         self.hd = HAVE_HD and not getattr(args, "no_hd", False)
-        self.hd_res = int(getattr(args, "hd_res", None) or 720)  # cap longest px dim
+        self.hd_res = int(getattr(args, "hd_res", None) or 480)  # cap longest px dim
         self.hd_colors = int(getattr(args, "hd_colors", None) or 96)
-        self.hd_ss = int(getattr(args, "hd_ss", None) or 2)  # 2=supersample (smoother); 1=fast (jittery)
+        self.hd_ss = int(getattr(args, "hd_ss", None) or 1)  # 1=fast (bilinear handles AA); 2=smoother but 4x slower
         self.cell_w_px = 8
         self.cell_h_px = 17  # refined from CSI 16 at runtime
         print(f"[app] render: {'HD sixel' if self.hd else 'text'}"
@@ -156,7 +156,7 @@ class App:
         home_lat = max(-89.0, min(89.0, float(self.home[0])))
         self.camera = Camera(spin=0.0, tilt=_math.radians(home_lat))
         print(f"[app] globe centered on latitude {home_lat:.1f}\u00b0", flush=True)
-        self.spin_speed = 0.50      # rad/s
+        self.spin_speed = 0.55      # rad/s
         self.trace_speed = 0.35     # cycles/s along the arc
         self.traces: dict[str, Trace] = {}
         self.lock = threading.Lock()
@@ -395,16 +395,10 @@ class App:
 
         o = []
         o.append(b"\x1b[?2026h")                       # synced update: begin
-        # full clear only on resize (handles margin text outside the sixel)
-        last = getattr(self, "_hd_last", None)
-        if last != (cols, rows, iw, ih):
-            o.append(b"\x1b[2J\x1b[H")
-            self._hd_last = (cols, rows, iw, ih)
-        # erase the previous sixel every frame by overwriting its cells with
-        # spaces -- Foot doesn't erase an old sixel when a new one is blitted,
-        # so without this the grid/trace/coastline lines streak as it spins.
-        for r in range(2, 2 + sh):
-            o.append(("\x1b[%d;2H" % r).encode()); o.append(blank)
+        # Clear the entire screen every frame. The synced update makes this
+        # atomic (no flicker). This is more reliable than per-cell space-erase,
+        # which left residual sixel pixels on the right side of the globe.
+        o.append(b"\x1b[2J\x1b[H")
         # sixel globe at row 2, col 2 (left-justified, fills height)
         o.append(b"\x1b[2;2H")
         o.append(sixel)
