@@ -8,9 +8,7 @@ network. Built for the **Foot** terminal (works in any truecolor terminal).
 
 ```
                  ┌──────────────────────────────────────────┐
-                 │   translucent sphere, far-side continents │
-                 │   visible through the near-side ocean    │
-                 │   ── plus animated arcs from you to each  │
+                 │   animated arcs from you to each  │
                  │      live connection endpoint            │
                  └──────────────────────────────────────────┘
 ```
