@@ -52,6 +52,22 @@ def _flag_emoji(cc: str) -> str:
     return chr(0x1F1E6 + (a - 65)) + chr(0x1F1E6 + (b - 65))
 
 
+def demo_traces():
+    """Return 12 Trace objects from Seattle to international destinations.
+    Used by --demo to run the full animated globe with fixed traces."""
+    traces = []
+    for i, (city, cc, lat, lon) in enumerate(DESTINATIONS):
+        traces.append(Trace(
+            a_lat=SEATTLE[0], a_lon=SEATTLE[1],
+            b_lat=lat, b_lon=lon,
+            color=_trace_color(city),
+            phase=i / 12.0,
+            proto="tcp", label=city, city=city, country=cc, cc=cc,
+            life=99999.0, alpha=1.0,
+        ))
+    return traces
+
+
 def main():
     pal = load_palette()
     pal.proto_tcp = (147, 17, 211)

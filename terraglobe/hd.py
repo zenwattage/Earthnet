@@ -55,13 +55,19 @@ def render_hd(width: int, height: int, camera, traces, cfg, left: bool = False,
     W = Wf * ss
     H = Hf * ss
     ARCH_MAX = 0.57
-    margin = 8 * ss
+    margin = 12 * ss
+    # Height: globe + arch space above
     R_h = (H - 2 * margin) / (2.0 + ARCH_MAX)
-    R_w = (W - 2 * margin) / 2.0
+    # Width: for left-justified, reserve ARCH_MAX*R on the left for arching
+    # arcs so they don't clip off-screen; right side can overflow into labels
+    if left:
+        R_w = (W - 2 * margin) / (2.0 + ARCH_MAX)
+    else:
+        R_w = (W - 2 * margin) / (2.0 + 2.0 * ARCH_MAX)
     R = min(R_h, R_w)
     top_pad = ARCH_MAX * R + margin
     cy = top_pad + R
-    cx = min(R + 6.0 * ss, W - R - 2.0 * ss) if left else W / 2.0
+    cx = (R * (1.0 + ARCH_MAX) + margin) if left else W / 2.0
     inv_R = 1.0 / R
 
     gridc = np.array(pal.grid, dtype=np.float32)

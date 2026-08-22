@@ -43,16 +43,23 @@ def build_parser() -> argparse.ArgumentParser:
                    "render at 2x then downsample). 1 disables it (faster, "
                    "slightly more jitter); 3 is smoother but slower.")
     p.add_argument("--demo", action="store_true",
-                   help="Render a single still frame with fake traces to "
-                        "stdout and exit (no TTY needed). Good for previews.")
+                   help="Run the animated globe with 12 demo traces from "
+                        "Seattle to international destinations (Tokyo, London, "
+                        "Sydney, etc). Fully animated, same as live mode.")
     return p
 
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     if args.demo:
-        from ._render_test import main as demo
-        demo()
+        from .app import App
+        from ._render_test import demo_traces, SEATTLE
+        args.home = f"{SEATTLE[0]},{SEATTLE[1]}"
+        app = App(args)
+        with app.lock:
+            for i, t in enumerate(demo_traces()):
+                app.traces[f"demo_{i}"] = t
+        app.run()
         return 0
     from .app import App
     App(args).run()
