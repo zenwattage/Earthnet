@@ -55,7 +55,7 @@ POLL_INTERVAL = 1.5     # seconds between connection-table scans
 TRACE_HOLD = 3.0        # seconds a trace stays full-bright after last sighting
 TRACE_FADE = 2.5        # seconds to fade out after hold
 MAX_TRACES = 48
-TARGET_FPS = 30
+TARGET_FPS = 60
 
 # Cell-height / em-size factor (ascent+descent+leading). Typical monospace.
 DEFAULT_PT_SCALE = 1.15
@@ -141,7 +141,7 @@ class App:
         self.cell_aspect = DEFAULT_CELL_ASPECT  # refined from CSI 16 at runtime
         # HD (sixel) path
         self.hd = HAVE_HD and not getattr(args, "no_hd", False)
-        self.hd_res = int(getattr(args, "hd_res", None) or 960)  # cap longest px dim
+        self.hd_res = int(getattr(args, "hd_res", None) or 720)  # cap longest px dim
         self.hd_colors = int(getattr(args, "hd_colors", None) or 96)
         self.hd_ss = int(getattr(args, "hd_ss", None) or 2)  # 2=supersample (smoother); 1=fast (jittery)
         self.cell_w_px = 8
