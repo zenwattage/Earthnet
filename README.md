@@ -1,4 +1,7 @@
 # earthnet
+My first Vibe-Coded project. A Iron Man 'Jarvis-style' HUD-like spinning globe that shows all my network connections. In the terminal. 
+
+The rest of this Readme was agent written other than a few edits by me:
 
 ![earthnet demo](earthnet-demo.gif)
 
