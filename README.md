@@ -22,7 +22,7 @@ Pure Python standard library — **no pip, no dependencies**. Just run it.
 
 ```bash
 cd earthnet
-python3 -m earthnet
+python3 -m earthnet (or with --demo flag for demo you see above)
 ```
 
 The first run downloads Natural Earth 110m land data (~1 MB) and caches it in
