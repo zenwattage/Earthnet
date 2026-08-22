@@ -156,7 +156,7 @@ class App:
         home_lat = max(-89.0, min(89.0, float(self.home[0])))
         self.camera = Camera(spin=0.0, tilt=_math.radians(home_lat))
         print(f"[app] globe centered on latitude {home_lat:.1f}\u00b0", flush=True)
-        self.spin_speed = 0.208     # rad/s
+        self.spin_speed = 0.50      # rad/s
         self.trace_speed = 0.35     # cycles/s along the arc
         self.traces: dict[str, Trace] = {}
         self.lock = threading.Lock()
