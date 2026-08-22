@@ -3,7 +3,7 @@ My first Vibe-Coded project. A Iron Man 'Jarvis-style' HUD-like spinning globe t
 
 The rest of this Readme was agent written other than a few edits by me:
 
-![earthnet demo](earthnet-demo.gif)
+![earthnet demo](en-demo.gif)
 
 A floating, translucent 3D globe of the Earth in your terminal, with glowing
 great-circle arcs tracing every internet connection coming and going from your
