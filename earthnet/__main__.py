@@ -1,4 +1,4 @@
-"""terraglobe entry point: python3 -m terraglobe [options]"""
+"""earthnet entry point: python3 -m earthnet [options]"""
 from __future__ import annotations
 
 import argparse
@@ -6,7 +6,7 @@ import argparse
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="terraglobe",
+        prog="earthnet",
         description="A floating translucent 3D Earth globe in your terminal "
                     "with live internet-connection trace arcs.",
     )

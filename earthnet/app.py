@@ -1,4 +1,4 @@
-"""Main application loop for terraglobe.
+"""Main application loop for earthnet.
 
 Ties together connection capture, GeoIP, and the globe renderer into a live,
 animated TUI. Designed for Foot but runs in any truecolor terminal.
@@ -323,7 +323,7 @@ class App:
         parts.append(at(rows - 1, cols, f"{accent}│"))
 
         # top bar
-        parts.append(at(1, 5, f"{accent}◉ {bright}TERRAGLOBE{dim} · {accent}LIVE LINK MATRIX"))
+        parts.append(at(1, 5, f"{accent}◉ {bright}EARTHNET{dim} · {accent}LIVE LINK MATRIX"))
         stat = (f"{dim}flows {bright}{self.flow_count}{dim}  "
                 f"links {bright}{len(traces)}{dim}  "
                 f"{bright}{self.fps:4.1f}{dim}fps")
@@ -422,7 +422,7 @@ class App:
         at(rows - 1, cols, accent + "\u2502".encode())
 
         # header (no side panel)
-        at(1, 5, accent + "\u25c9 ".encode() + bright + b"TERRAGLOBE" + dim +
+        at(1, 5, accent + "\u25c9 ".encode() + bright + b"EARTHNET" + dim +
            " \u00b7 ".encode() + accent + b"HD LINK MATRIX")
         stat = (dim + ("flows %d  links %d  %.1ffps" % (self.flow_count, len(traces), self.fps)).encode())
         at(1, max(2, cols - 2 - len(stat.decode('ascii', 'replace'))), stat)

@@ -1,4 +1,4 @@
-"""Connection capture for terraglobe.
+"""Connection capture for earthnet.
 
 Three backends, tried in order:
 

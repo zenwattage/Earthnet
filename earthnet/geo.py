@@ -1,4 +1,4 @@
-"""GeoIP resolution for terraglobe.
+"""GeoIP resolution for earthnet.
 
 Two backends, both pure stdlib:
 
@@ -7,7 +7,7 @@ Two backends, both pure stdlib:
 2. An ip-api.com batch fallback (no key, HTTP, ~45 req/min) used when no MMDB is
    configured or an IP isn't in the database.
 
-Lookups are cached to ``~/.cache/terraglobe/geo.json`` so restarts are instant
+Lookups are cached to ``~/.cache/earthnet/geo.json`` so restarts are instant
 and we stay well under the ip-api rate limit.
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 
 CACHE_DIR = Path(os.environ.get(
-    "XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "terraglobe"
+    "XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "earthnet"
 GEO_CACHE = CACHE_DIR / "geo.json"
 
 _MMDB_MARKER = b"\xab\xcd\xefMaxMind.com"
@@ -273,7 +273,7 @@ class GeoResolver:
         try:
             req = urllib.request.Request(
                 url, data=body,
-                headers={"User-Agent": "terraglobe/1.0",
+                headers={"User-Agent": "earthnet/1.0",
                          "Content-Type": "application/json"})
             with urllib.request.urlopen(req, timeout=8) as r:
                 rows = json.loads(r.read())
@@ -337,7 +337,7 @@ class GeoResolver:
         try:
             req = urllib.request.Request(
                 "http://ip-api.com/json/?fields=query,lat,lon",
-                headers={"User-Agent": "terraglobe/1.0"})
+                headers={"User-Agent": "earthnet/1.0"})
             with urllib.request.urlopen(req, timeout=8) as r:
                 d = json.loads(r.read())
             if d.get("lat") is not None:

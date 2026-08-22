@@ -3,7 +3,7 @@
 Renders a single frame with HD sixel (if numpy + Pillow are available) or
 falls back to the text renderer.  View in Foot:
 
-    foot -e python3 -m terraglobe --demo
+    foot -e python3 -m earthnet --demo
 """
 from __future__ import annotations
 
@@ -116,7 +116,7 @@ def main():
             dim = "\x1b[38;2;%d;%d;%dm" % pal.hud_dim
             bright = "\x1b[38;2;%d;%d;%dm" % pal.hud_bright
             accent = "\x1b[38;2;%d;%d;%dm" % ac
-            header = accent + "\u25c9 " + bright + "TERRAGLOBE" + dim + " \u00b7 " + accent + "DEMO"
+            header = accent + "\u25c9 " + bright + "EARTHNET" + dim + " \u00b7 " + accent + "DEMO"
             out.write(("\x1b[1;5H" + header).encode())
             out.write(("\x1b[1;%dH" % (cols - 22) + dim + "12 links from Seattle").encode())
 

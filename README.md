@@ -1,4 +1,4 @@
-# terraglobe
+# earthnet
 
 A floating, translucent 3D globe of the Earth in your terminal, with glowing
 great-circle arcs tracing every internet connection coming and going from your
@@ -18,12 +18,12 @@ Pure Python standard library — **no pip, no dependencies**. Just run it.
 ## Quick start
 
 ```bash
-cd terraglobe
-python3 -m terraglobe
+cd earthnet
+python3 -m earthnet
 ```
 
 The first run downloads Natural Earth 110m land data (~1 MB) and caches it in
-`~/.cache/terraglobe/`. It then geolocates your public IP for "home", reads your
+`~/.cache/earthnet/`. It then geolocates your public IP for "home", reads your
 live connection table, and starts the globe.
 
 Press `q` to quit. Full key bindings:
@@ -43,7 +43,7 @@ Press `q` to quit. Full key bindings:
 
 ### High-definition sixel mode (full pixel resolution)
 
-When **numpy** and **Pillow** are installed, terraglobe automatically renders
+When **numpy** and **Pillow** are installed, earthnet automatically renders
 the globe as a **TRON / Jarvis-HUD wireframe** and blits it with **sixel**
 (Foot's pixel-image protocol). The globe is pure glowing lines on a transparent
 background — the **sphere silhouette**, the **lat/long graticule**, and the
@@ -84,11 +84,11 @@ Then just run as usual — HD is used automatically. If for some reason numpy or
 Pillow is missing, the app falls back to the text renderer.
 
 ```bash
-foot -W 80x30 python3 -m terraglobe          # HD Jarvis widget
-python3 -m terraglobe --hd-res 540           # lower res = higher FPS
-python3 -m terraglobe --hd-res 1200          # bigger / more detail (slower)
-python3 -m terraglobe --hd-colors 64         # smaller output, faster
-python3 -m terraglobe --no-hd                # force the text renderer
+foot -W 80x30 python3 -m earthnet          # HD Jarvis widget
+python3 -m earthnet --hd-res 540           # lower res = higher FPS
+python3 -m earthnet --hd-res 1200          # bigger / more detail (slower)
+python3 -m earthnet --hd-colors 64         # smaller output, faster
+python3 -m earthnet --no-hd                # force the text renderer
 ```
 
 The globe spins slowly, so ~6 fps at the default `--hd-res 960` reads as smooth
@@ -98,7 +98,7 @@ for a bigger, more detailed globe.
 ### Globe size — the Jarvis-HUD look
 
 By default the globe **fills the window** edge-to-edge (no dead space, maximum
-resolution) inside a sci-fi HUD frame: corner brackets, a `TERRAGLOBE · LIVE
+resolution) inside a sci-fi HUD frame: corner brackets, a `EARTHNET · LIVE
 LINK MATRIX` header, a glassy `ACTIVE LINKS` telemetry panel listing each
 endpoint, compass ticks (N/E/S/W) around the rim, and a status footer. It's
 styled like the small globe + projected flight path in Iron Man's suit HUD.
@@ -107,16 +107,16 @@ For the compact widget look, just launch Foot small — the globe fills whatever
 size you give it:
 
 ```bash
-foot -W 76x30 python3 -m terraglobe       # small Jarvis-style widget (chars)
-foot -W 120x40 python3 -m terraglobe      # larger, still no dead space
-foot -w 760x600 python3 -m terraglobe     # ...or size in pixels
+foot -W 76x30 python3 -m earthnet       # small Jarvis-style widget (chars)
+foot -W 120x40 python3 -m earthnet      # larger, still no dead space
+foot -w 760x600 python3 -m earthnet     # ...or size in pixels
 ```
 
 Or pin a physical size instead of filling:
 
 ```bash
-python3 -m terraglobe --inches 5         # fixed 5" globe
-python3 -m terraglobe --pt-scale 1.05    # nudge inch sizing on your font
+python3 -m earthnet --inches 5         # fixed 5" globe
+python3 -m earthnet --pt-scale 1.05    # nudge inch sizing on your font
 ```
 
 ### High-definition rendering
@@ -133,7 +133,7 @@ python3 -m terraglobe --pt-scale 1.05    # nudge inch sizing on your font
 Preview a single still frame without taking over your terminal:
 
 ```bash
-python3 -m terraglobe --demo | less -R
+python3 -m earthnet --demo | less -R
 ```
 
 ## How connections are captured
@@ -147,11 +147,11 @@ Three backends are tried in order:
    automatically as a fallback so the app is demoable unprivileged.
 
 Without root you only see this machine's own sockets. To see *whole-network*
-traffic (the original goal), run terraglobe on your router/gateway where
+traffic (the original goal), run earthnet on your router/gateway where
 conntrack sees every flow passing through, e.g.:
 
 ```bash
-sudo python3 -m terraglobe
+sudo python3 -m earthnet
 ```
 
 or grant the capability once and skip sudo:
@@ -165,8 +165,8 @@ sudo setcap cap_net_admin+ep "$(command -v python3)"
 
 ## GeoIP
 
-By default terraglobe uses the free **ip-api.com** batch endpoint (no key, ~45
-lookups/min, results cached to `~/.cache/terraglobe/geo.json`). That's plenty
+By default earthnet uses the free **ip-api.com** batch endpoint (no key, ~45
+lookups/min, results cached to `~/.cache/earthnet/geo.json`). That's plenty
 for a home network's active flows.
 
 For fully **offline** GeoIP, download a GeoLite2-City database and point the app
@@ -176,21 +176,21 @@ at it:
 # MaxMind now requires a (free) license key:
 #   https://www.maxmind.com/en/geolite2/signup
 # Put GeoLite2-City.mmdb somewhere, then:
-python3 -m terraglobe --mmdb ~/GeoLite2-City.mmdb
+python3 -m earthnet --mmdb ~/GeoLite2-City.mmdb
 ```
 
-terraglobe includes its own tiny MMDB reader, so no `geoip2` package is needed.
+earthnet includes its own tiny MMDB reader, so no `geoip2` package is needed.
 
 Override your home location (e.g. if auto-detection is wrong or you want to
 visualize from another vantage point):
 
 ```bash
-python3 -m terraglobe --home 51.5074,-0.1278
+python3 -m earthnet --home 51.5074,-0.1278
 ```
 
 ## Theming (matches your system theme)
 
-terraglobe reads your **active Omarchy theme** at startup and derives its entire
+earthnet reads your **active Omarchy theme** at startup and derives its entire
 palette from it — background, ocean tint, land, graticule, trace arcs, and HUD
 all follow your current theme colors. It looks at:
 
@@ -208,15 +208,15 @@ omarchy theme set gruvbox           # ...etc
 
 Outside Omarchy (or with no theme found), the built-in default palette is used.
 
-You can preview exactly what palette terraglobe computes from your theme:
+You can preview exactly what palette earthnet computes from your theme:
 
 ```bash
-python3 -m terraglobe.theme
+python3 -m earthnet.theme
 ```
 
 ### Translucency
 
-terraglobe also reads the theme's background alpha (`background-alpha` in the
+earthnet also reads the theme's background alpha (`background-alpha` in the
 theme's `shell.toml`, or Foot's `[colors] alpha`) and matches it: the space
 around the globe is never painted, so Foot's real (potentially translucent)
 background — and the desktop behind it — shows through. The globe's rim blend
@@ -225,7 +225,7 @@ floats glassily over your desktop.
 
 ## Recommended Foot settings
 
-terraglobe needs **24-bit color** and a reasonably sized window. Foot enables
+earthnet needs **24-bit color** and a reasonably sized window. Foot enables
 truecolor by default and your Omarchy theme already configures the colors, so
 you usually don't need to change anything. Optional tweaks in
 `~/.config/foot/foot.ini`:
@@ -236,7 +236,7 @@ you usually don't need to change anything. Optional tweaks in
 damage-whole-buffer=true
 ```
 
-Then launch: `foot --app-id=terraglobe python3 -m terraglobe`.
+Then launch: `foot --app-id=earthnet python3 -m earthnet`.
 
 ## How it works
 
@@ -256,7 +256,7 @@ Then launch: `foot --app-id=terraglobe python3 -m terraglobe`.
 ## Files
 
 ```
-terraglobe/
+earthnet/
 ├── __main__.py   # entry point + CLI
 ├── app.py        # main loop: capture thread, animation, HUD, input, TTY
 ├── globe.py      # 3D math, projection, translucent renderer, trace arcs

@@ -1,4 +1,4 @@
-"""High-definition sixel rendering path for terraglobe.
+"""High-definition sixel rendering path for earthnet.
 
 When numpy + Pillow are available, the globe and trace arcs are rasterized to a
 real pixel image (anti-aliased, far higher resolution than text cells) and

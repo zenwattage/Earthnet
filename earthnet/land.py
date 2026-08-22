@@ -16,7 +16,7 @@ from pathlib import Path
 from .globe import LandMask, empty_landmask
 
 CACHE_DIR = Path(os.environ.get(
-    "XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "terraglobe"
+    "XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "earthnet"
 
 MASK_CACHE = CACHE_DIR / "landmask.bin"
 GEOJSON_CACHE = CACHE_DIR / "ne_110m_land.json"
@@ -34,7 +34,7 @@ DEFAULT_NLON = 720
 
 def _download(url: str, dest: Path, timeout: float = 30.0) -> bool:
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "terraglobe/1.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "earthnet/1.0"})
         with urllib.request.urlopen(req, timeout=timeout) as r:
             data = r.read()
         dest.parent.mkdir(parents=True, exist_ok=True)

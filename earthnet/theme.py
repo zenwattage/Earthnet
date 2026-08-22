@@ -1,4 +1,4 @@
-"""Theme integration: derive terraglobe's palette from the active Omarchy theme.
+"""Theme integration: derive earthnet's palette from the active Omarchy theme.
 
 Reads the current theme's ``colors.toml`` (preferred) or ``foot.ini`` from
 ``~/.local/state/omarchy/current/theme/`` and maps it onto a globe ``Palette``.
