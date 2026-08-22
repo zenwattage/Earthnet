@@ -120,15 +120,6 @@ class App:
               f"accent #{self.palette.hud_accent[0]:02X}"
               f"{self.palette.hud_accent[1]:02X}{self.palette.hud_accent[2]:02X}",
               flush=True)
-        # Override the TCP trace color to #9311D3. Set it on the palette too so
-        # the sixel fixed-palette includes the exact color (otherwise it would
-        # quantize to the nearest theme color).
-        self.palette.proto_tcp = (147, 17, 211)
-        self.proto_colors = {
-            "tcp": self.palette.proto_tcp,
-            "udp": self.palette.proto_udp,
-            "icmp": self.palette.proto_icmp,
-        }
         # Theme translucency: let the globe rim blend into whatever alpha the
         # terminal/theme background calls for.
         self.theme_alpha = load_theme_alpha()
@@ -227,9 +218,17 @@ class App:
                 print(f"[app] poll error: {e}", flush=True)
             self._stop.wait(POLL_INTERVAL)
 
+    def _trace_color(self, ip: str) -> tuple:
+        """Distinct bright color per destination IP via HSV hash.
+        Each endpoint gets its own hue so traces don't blur together."""
+        import colorsys, hashlib
+        h = int(hashlib.md5(ip.encode()).hexdigest()[:8], 16) / 0xFFFFFFFF
+        r, g, b = colorsys.hsv_to_rgb(h, 0.65, 1.0)
+        return (int(r * 255), int(g * 255), int(b * 255))
+
     def _upsert_trace(self, ip: str, proto: str, g: dict):
         t = self.traces.get(ip)
-        color = self.proto_colors.get(proto, self.palette.trace)
+        color = self._trace_color(ip)
         city = g.get("city", "") or ""
         country = g.get("country", "") or ""
         cc = (g.get("cc", "") or "").upper()

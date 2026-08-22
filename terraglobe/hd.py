@@ -117,7 +117,7 @@ def render_hd(width: int, height: int, camera, traces, cfg, left: bool = False,
         gx[:, 1:] = c[:, 1:] - c[:, :-1]
         gy[1:, :] = c[1:, :] - c[:-1, :]
         g = np.sqrt(gx * gx + gy * gy)
-        return np.clip(g / 0.5, 0.0, 1.0) * inside * rim_band
+        return np.clip(g / 0.28, 0.0, 1.0) * inside * rim_band
     coast_n_int = grad_int(cn_b)
     coast_f_int = grad_int(cf_b)
 
@@ -126,7 +126,7 @@ def render_hd(width: int, height: int, camera, traces, cfg, left: bool = False,
         def gdist(v, step):
             return np.abs(((v + step / 2.0) % step) - step / 2.0)
         dg = np.minimum(gdist(nlon, cfg.grid_step_lon), gdist(nlat, cfg.grid_step_lat))
-        grat_int = np.clip(1.0 - dg / 0.9, 0.0, 1.0) * inside
+        grat_int = np.clip(1.0 - dg / 0.35, 0.0, 1.0) * inside * 0.22
     else:
         grat_int = np.zeros_like(r2)
 
@@ -230,7 +230,7 @@ def _rasterize_trace(tr, camera, R, W, H, cx, cy, pal, glow, tcolr):
     color = np.array(tr.color, dtype=np.float32)
     far = np.array(pal.trace_far, dtype=np.float32)
     col = np.broadcast_to(color, (steps + 1, 3)).copy()
-    col = np.where((behind & ~occluded)[:, None], col * 0.5 + far * 0.5, col)
+    col = np.where((behind & ~occluded)[:, None], col * 0.4, col)
 
     # --- dense polyline interpolation so the line is continuous (no breakup) ---
     dxs = np.diff(px); dys = np.diff(py)
@@ -248,8 +248,8 @@ def _rasterize_trace(tr, camera, R, W, H, cx, cy, pal, glow, tcolr):
         ok0 = GVP > 0.02
         # crisp brush: centre + 4 edge pixels only (no diagonal corners -> no
         # fuzzy white outline); keeps the line thin and laser-like
-        for dy, dx, wmul in ((0, 0, 1.0), (-1, 0, 0.5), (1, 0, 0.5),
-                             (0, -1, 0.5), (0, 1, 0.5)):
+        for dy, dx, wmul in ((0, 0, 1.0), (-1, 0, 0.3), (1, 0, 0.3),
+                             (0, -1, 0.3), (0, 1, 0.3)):
             yy = PYP + dy; xx = PXP + dx
             wgt = GVP * wmul
             ok = ok0 & (xx >= 0) & (xx < W) & (yy >= 0) & (yy < H)
@@ -309,6 +309,17 @@ def _fixed_pal_image(pal) -> "Image.Image":
             colors.add(tuple(int(v * b) for v in ct))
             # behind-limb blend: col*0.5 + far*0.5, then brightness
             colors.add(tuple(int((ct[j] * 0.5 + far[j] * 0.5) * b) for j in range(3)))
+    # per-destination trace colors: 12-hue sweep so distinct trace colors
+    # quantize well in the fixed sixel palette (no flicker)
+    import colorsys as _cs
+    for hi in range(12):
+        h = hi / 12.0
+        r, g, b = _cs.hsv_to_rgb(h, 0.65, 1.0)
+        ct = (int(r * 255), int(g * 255), int(b * 255))
+        for i in range(steps + 1):
+            br = i / steps
+            colors.add(tuple(int(v * br) for v in ct))
+            colors.add(tuple(int(v * 0.4 * br) for v in ct))
     flat = [v for c in sorted(colors) for v in c]
     pimg = Image.new("P", (len(colors), 1))
     pimg.putpalette(flat)
