@@ -301,7 +301,7 @@ def _fixed_pal_image(pal) -> "Image.Image":
     base = [pal.grid, pal.trace, pal.trace_far, pal.trace_hot,
             pal.proto_tcp, pal.proto_udp, pal.proto_icmp]
     far = tuple(pal.trace_far)
-    steps = 16
+    steps = 8
     for c in base:
         ct = tuple(int(v) for v in c)
         for i in range(steps + 1):
@@ -309,19 +309,23 @@ def _fixed_pal_image(pal) -> "Image.Image":
             colors.add(tuple(int(v * b) for v in ct))
             # behind-limb blend: col*0.5 + far*0.5, then brightness
             colors.add(tuple(int((ct[j] * 0.5 + far[j] * 0.5) * b) for j in range(3)))
-    # per-destination trace colors: 12-hue sweep so distinct trace colors
+    # per-destination trace colors: 8-hue sweep so distinct trace colors
     # quantize well in the fixed sixel palette (no flicker)
     import colorsys as _cs
-    for hi in range(12):
-        h = hi / 12.0
+    for hi in range(8):
+        h = hi / 8.0
         r, g, b = _cs.hsv_to_rgb(h, 0.65, 1.0)
         ct = (int(r * 255), int(g * 255), int(b * 255))
         for i in range(steps + 1):
             br = i / steps
             colors.add(tuple(int(v * br) for v in ct))
             colors.add(tuple(int(v * 0.4 * br) for v in ct))
-    flat = [v for c in sorted(colors) for v in c]
-    pimg = Image.new("P", (len(colors), 1))
+    # PIL 'P' mode supports max 256 palette entries
+    sorted_colors = sorted(colors)
+    if len(sorted_colors) > 256:
+        sorted_colors = sorted_colors[:256]
+    flat = [v for c in sorted_colors for v in c]
+    pimg = Image.new("P", (len(sorted_colors), 1))
     pimg.putpalette(flat)
     _FIXED_PAL_CACHE[key] = pimg
     return pimg
