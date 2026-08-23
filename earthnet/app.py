@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import os
 import select
-import signal
 import sys
 import threading
 import time
@@ -509,6 +508,12 @@ class App:
             import termios, tty
             old_term = termios.tcgetattr(fd)
             tty.setcbreak(fd)
+            # setcbreak leaves ISIG on, so Ctrl-C raises SIGINT mid-frame
+            # instead of arriving as byte 0x03 for the clean-quit branch.
+            # Turn off signal generation so Ctrl-C is delivered as a byte.
+            attrs = termios.tcgetattr(fd)
+            attrs[3] &= ~termios.ISIG  # lflags
+            termios.tcsetattr(fd, termios.TCSANOW, attrs)
         except Exception:
             pass
         out.write(ALT_ON + HIDE)
@@ -576,6 +581,10 @@ class App:
                 wait = max(0.0, 1.0 / TARGET_FPS - elapsed)
                 if wait > 0:
                     select.select([sys.stdin], [], [], wait)
+        except KeyboardInterrupt:
+            # safety net: any stray interrupt (e.g. closing the terminal)
+            # exits cleanly instead of dumping a traceback mid-frame.
+            self.running = False
         finally:
             self._stop.set()
             out.write(RESET + SHOW + ALT_OFF)
