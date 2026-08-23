@@ -16,9 +16,39 @@ network. Built for the **Foot** terminal (works in any truecolor terminal).
                  └──────────────────────────────────────────┘
 ```
 
-Pure Python standard library — **no pip, no dependencies**. Just run it.
+Pure Python standard library — **no runtime dependencies**. Just run it.
 
-## Quick start
+## Installation
+
+**Arch Linux (AUR)** — once published:
+
+```bash
+yay -S earthnet        # or: paru -S earthnet
+earthnet               # run from anywhere
+```
+
+**Arch Linux (local build from this repo):**
+
+```bash
+git clone https://github.com/zenwattage/Earthnet.git
+cd Earthnet
+makepkg -si            # installs via pacman
+```
+
+**Any distro (pipx / pip):**
+
+```bash
+pipx install .         # or: pip install .
+earthnet
+```
+
+Optional extras for the high-definition sixel renderer (automatic when present):
+
+```bash
+pipx inject earthnet numpy pillow
+```
+
+## Quick start (no install, run from source)
 
 ```bash
 cd earthnet

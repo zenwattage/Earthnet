@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "earthnet"
+dynamic = ["version"]
+description = "A floating translucent 3D Earth globe in your terminal with live internet-connection trace arcs."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = ["terminal", "globe", "earth", "network", "hud", "jarvis", "sixel", "tui"]
+classifiers = [
+    "Environment :: Console (Text-Based)",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Networking :: Monitoring",
+]
+
+[project.scripts]
+earthnet = "earthnet.__main__:main"
+
+[tool.setuptools]
+packages = ["earthnet"]
+
+[tool.setuptools.dynamic]
+version = {attr = "earthnet.__version__"}
