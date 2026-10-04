@@ -28,8 +28,8 @@ MIRRORS = [
     "master/110m/physical/ne_110m_land.json",
 ]
 
-DEFAULT_NLAT = 360
-DEFAULT_NLON = 720
+DEFAULT_NLAT = 720
+DEFAULT_NLON = 1440
 
 
 def _download(url: str, dest: Path, timeout: float = 30.0) -> bool:

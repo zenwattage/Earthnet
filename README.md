@@ -6,6 +6,9 @@ A translucent 3D Earth globe in your terminal, with glowing arcs tracing every l
 
 Pure Python standard library — no runtime dependencies.
 
+> **Omarchy users:** there is now a full-resolution GUI version that lives in
+> the status bar as a shell plugin. See [`omarchy-plugin/`](omarchy-plugin/).
+
 ## Install
 
 **Arch Linux:**
@@ -71,4 +74,4 @@ Captures live flows in order: `conntrack -L` → `/proc/net/nf_conntrack` → `s
 sudo earthnet
 ```
 
-GeoIP uses the free ip-api.com by default (cached). Use `--mmdb` for offline lookups — earthnet ships its own MMDB reader, no `geoip2` needed.
+GeoIP uses the free ip-api.com by default (cached). Use `--mmdb` for offline lookups — earthnet ships its own MMDB reader, no `geoip2` needed. Lookups include ISP/org/ASN as well as coordinates.

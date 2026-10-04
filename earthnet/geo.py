@@ -254,13 +254,21 @@ class GeoResolver:
             return None
         country = rec.get("country", {}) or {}
         city = rec.get("city", {}) or {}
+        traits = rec.get("traits", {}) or {}
         names = lambda d: d.get("names", {}) or {}
+        # GeoLite2-City carries ASN in traits; GeoLite2-ASN has it top-level.
+        asn = traits.get("autonomous_system_number") or rec.get("autonomous_system_number") or 0
+        org = (traits.get("autonomous_system_organization")
+               or rec.get("autonomous_system_organization") or "")
         return {
             "lat": float(loc["latitude"]),
             "lon": float(loc["longitude"]),
             "city": names(city).get("en", ""),
             "country": names(country).get("en", ""),
             "cc": country.get("iso_code", ""),
+            "isp": org,
+            "org": org,
+            "as": ("AS%d %s" % (asn, org)).strip() if asn else org,
             "src": "mmdb",
         }
 
@@ -269,7 +277,8 @@ class GeoResolver:
             return {}
         body = json.dumps(ips).encode()
         url = ("http://ip-api.com/batch"
-               "?fields=status,query,country,countryCode,city,lat,lon,isp&lang=en")
+               "?fields=status,query,country,countryCode,city,lat,lon,"
+               "isp,org,as&lang=en")
         try:
             req = urllib.request.Request(
                 url, data=body,
@@ -290,6 +299,9 @@ class GeoResolver:
                 "city": row.get("city") or "",
                 "country": row.get("country") or "",
                 "cc": (row.get("countryCode") or "").upper(),
+                "isp": row.get("isp") or "",
+                "org": row.get("org") or "",
+                "as": row.get("as") or "",
                 "src": "ipapi",
             }
         return out
@@ -301,7 +313,9 @@ class GeoResolver:
         with self._lock:
             for ip in ips:
                 c = self.cache.get(ip)
-                if c:
+                # Entries written before ISP/ASN was added lack these keys;
+                # refresh them once so the legend isn't stuck on blanks.
+                if c and "isp" in c:
                     result[ip] = c
                 elif self.mmdb:
                     m = self._mmdb_lookup(ip)
