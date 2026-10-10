@@ -3,7 +3,7 @@
 A translucent 3D Earth globe in your terminal, with glowing arcs tracing every live internet connection to and from your network. Jarvis-style HUD, in any truecolor terminal.
 UPDATE: I am currently building this into an Omarchy plugin which renders beautifully:
 ![earthnet plugin demo](enbarvid.mp4)
-# ![earthnet demo](entermdemo.mp4)
+
 
 Pure Python standard library — no runtime dependencies.
 
