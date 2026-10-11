@@ -1,14 +1,13 @@
 # earthnet
 
 A translucent 3D Earth globe in your terminal, with glowing arcs tracing every live internet connection to and from your network. Jarvis-style HUD, in any truecolor terminal.
-UPDATE: I am currently building this into an Omarchy plugin which renders beautifully:
-![earthnet plugin demo](plugindemo.gif)
-
-
 Pure Python standard library — no runtime dependencies.
 
-> **Omarchy users:** there is now a full-resolution GUI version that lives in
-> the status bar as a shell plugin. See [`omarchy-plugin/`](omarchy-plugin/).
+> **Omarchy users:** the same globe, at full resolution, as a status-bar shell
+> plugin — now in its own repo:
+> [**zenwattage/Earthnet-omarchy**](https://github.com/zenwattage/Earthnet-omarchy).
+
+![earthnet live in the Omarchy bar](https://raw.githubusercontent.com/zenwattage/Earthnet-omarchy/master/demo.gif)
 
 ## Install
 
